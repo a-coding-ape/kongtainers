@@ -1,0 +1,260 @@
+---
+version: "3.9"
+networks:
+  default:
+    driver: bridge
+x-environment: &default-tz-puid-pgid
+  TZ: $TZ
+  PUID: $PUID
+  PGID: $PGID
+x-common-keys-apps: &common-keys-apps
+  network_mode: "host"
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+x-common-apps-gluetun: &common-apps-gluetun
+  network_mode: "service:gluetun"
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+services:
+  bazarr:
+    <<: *common-apps-gluetun
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      <<: *default-tz-puid-pgid
+    volumes:
+      - volume01:/home/spank/docker/appdata/bazarr/config
+      - volume02:/mnt/media/movies
+      - volume02:/mnt/media/tv
+  deunhealth:
+    <<: *common-apps-gluetun
+    image: qmcgaw/deunhealth
+    container_name: deunhealth
+    profiles: ["apps", "all"]
+    environment:
+      LOG_LEVEL: info
+      HEALTH_SERVER_ADDRESS: 127.0.0.1:9999
+      TZ: $TZ
+      # DOCKER_HOST: tcp://socket-proxy:2375
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    ports:
+      - "8080:8080"
+    environment:
+      DOZZLE_LEVEL: info
+      DOZZLE_TAILSIZE: 300
+      DOZZLE_FILTER: "status=running"
+      # DOZZLE_FILTER: "label=log_me" # limits logs displayed to containers wit>
+      # DOCKER_HOST: tcp://socket-proxy:2375 # Use this instead if you have Soc>
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: [ "CMD", "/dozzle", "healthcheck" ]
+      interval: 3s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+  filebrowser:
+    image: filebrowser/filebrowser:s6
+    container_name: filebrowser
+    networks:
+      - default
+    ports:
+      - "82:80" # 80 and 81 are used by Nginx Proxy Manager
+    volumes:
+      - volume01:/home/spank/docker/appdata/filebrowser/config
+      - $DATADIR:/blackhole
+    environment:
+      <<: *default-tz-puid-pgid
+    restart: always
+  gluetun:
+    image: qmcgaw/gluetun
+    container_name: gluetun
+    restart: always
+    ports:
+      - "8112:8112" # qBittorrent
+      - "6881:6881" # qBittorrent
+      - "6881:6881/udp" # qBittorrent
+      - "9117:9117" # jackett                        
+      - "9696:9696" # prowlarr
+      - "8989:8989" # sonarr
+      - "6767:6767" # bazarr
+      - "8787:8787" # readarr
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    volumes:
+      - volume01:/home/spank/docker/appdata/gluetun
+    environment:
+      TZ: $TZ
+      VPN_SERVICE_PROVIDER: surfshark
+      VPN_TYPE: wireguard
+      WIREGUARD_PRIVATE_KEY: $SURFSHARK_WG_PRIVATE_KEY
+      WIREGUARD_ADDRESSES: 10.14.0.2/16
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    networks:
+      - default
+    ports:
+      - "3000:3000"
+    user: $PUID
+    volumes:
+      - volume01:/home/spank/docker/appdata/grafana/config
+    environment:
+      GF_INSTALL_PLUGINS: "grafana-clock-panel,grafana-simple-json-datasource,grafana-worldmap-panel,grafana-piechart-panel"
+  heimdall:
+    image: lscr.io/linuxserver/heimdall
+    container_name: heimdall
+    network_mode: host
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - volume01:/home/spank/docker/appdata/heimdall/config
+    environment:
+      <<: *default-tz-puid-pgid
+    restart: always
+  jackett:
+    <<: *common-apps-gluetun
+    image: lscr.io/linuxserver/jackett:latest
+    container_name: jackett
+    environment:
+      <<: *default-tz-puid-pgid
+      AUTO_UPDATE: true
+    volumes:
+      - volume01:/home/spank/docker/appdata/jackett/config
+      - volume02:/mnt/media/downloads
+    restart: unless-stopped
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    #devices:
+    #  - /dev/dri:/dev/dri # for harware transcoding
+    network_mode: "host"
+    ports:
+      - "8096:8096"
+      - "8920:8920" # Emby also uses same port if running both
+    environment:
+      <<: *default-tz-puid-pgid
+      UMASK_SET: 022
+    volumes:
+      - volume01:/home/spank/docker/appdata/jellyfin/config
+      - volume02:/mnt/media/tv
+      - volume02:/mnt/media/movies
+      - /dev/shm:/data/transcode # Offload transcoding to RAM
+    security_opt:
+      - no-new-privileges:true
+    restart: "no"
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ce:latest
+    restart: unless-stopped
+    networks:
+      - default
+    command: -H unix:///var/run/docker.sock
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - volume01:/appdata/portainer/data
+    environment:
+      TZ: $TZ
+  prowlarr:
+    <<: *common-apps-gluetun
+    image: ghcr.io/linuxserver/prowlarr:develop
+    container_name: prowlarr
+    volumes:
+      - volume01:/home/spank/docker/appdata/prowlarr/config
+      - "/etc/localtime:/etc/localtime:ro"
+  qbittorrent:
+    <<: *common-apps-gluetun
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    volumes:
+      - volume01:/home/spank/docker/appdata/qbittorrent/config
+      - volume02:/mnt/media/downloads
+    environment:
+      <<: *default-tz-puid-pgid
+      UMASK_SET: 002
+      WEBUI_PORT: 8112
+    healthcheck:
+      test: "curl -sf https://example.com  || exit 1"
+      interval: 1m
+      timeout: 10s
+      retries: 1
+  radarr:
+    <<: *common-apps-gluetun
+    image: lscr.io/linuxserver/radarr:nightly
+    container_name: radarr
+    volumes:
+      - volume01:/home/spank/docker/appdata/radarr/config
+      - volume02:/mnt/media/data
+      - "/etc/localtime:/etc/localtime:ro"
+    environment:
+      <<: *default-tz-puid-pgid
+  readarr:
+    <<: *common-apps-gluetun
+    image: lscr.io/linuxserver/readarr:develop
+    container_name: readarr
+    environment:
+      <<: *default-tz-puid-pgid
+    volumes:
+      - volume01:/home/spank/docker/appdata/readarr/config
+      - volume02:/mnt/media/books
+      - volume02:/mnt/media/downloads
+  recyclarr:
+    <<: *common-apps-gluetun
+    image: ghcr.io/recyclarr/recyclarr:latest
+    container_name: recyclarr
+    user: $PUID:$PUID
+    volumes:
+      - volume01:/home/spank/docker/appdata/recyclarr/config
+    environment:
+      TZ: $TZ
+  sonarr:
+    <<: *common-apps-gluetun
+    image: lscr.io/linuxserver/sonarr
+    container_name: sonarr
+    volumes:
+      - volume01:/home/spank/docker/appdata/sonarr/config
+      - volume02:/mnt/media/downloads
+      - "/etc/localtime:/etc/localtime:ro"
+    environment:
+      <<: *default-tz-puid-pgid
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    network_mode: "host"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      TZ: $TZ
+      WATCHTOWER_CLEANUP: true
+      WATCHTOWER_REMOVE_VOLUMES: true
+      WATCHTOWER_INCLUDE_STOPPED: true
+      WATCHTOWER_NO_STARTUP_MESSAGE: false
+      WATCHTOWER_SCHEDULE: "0 30 12 * * *" # Everyday at 12:30
+      # DOCKER_HOST: tcp://socket-proxy:2375 # Use this if you have Socket Prox>
+      DOCKER_API_VERSION: "1.40"
+    restart: always
+volumes:
+  volume01:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/spank/docker
+      o: bind
+  volume02:
+    driver: local
+    driver_opts:
+      type: none
+      device: /mnt/media
+      o: bind
