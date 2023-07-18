@@ -1,0 +1,11 @@
+qbittorrent:
+  <<: *stealth
+  image: lscr.io/linuxserver/qbittorrent:latest
+  container_name: qbittorrent
+  volumes:
+    - $DOCKERDIR/appdata/qbittorrent:/config
+    - /opt/qbittorrent/webui:/opt/qbittorrent/webui
+    - $BLACKHOLE:/data
+  environment:
+    <<: *user
+    UMASK_SET: 002

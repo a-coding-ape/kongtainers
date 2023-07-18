@@ -1,0 +1,108 @@
+autostart_video: true
+blobs_path: blobs
+blobs_storage: FILESYSTEM
+calculate_md5: false
+continue_playlist_default: true
+create_galleries_from_folders: true
+create_image_clip_from_videos: false
+dangerous_allow_public_without_auth: "false"
+database: /root/.stash/stash-go.sqlite
+defaults:
+  auto_tag_task:
+    paths: []
+    performers:
+    - '*'
+    studios:
+    - '*'
+    tags:
+    - '*'
+  scan_task:
+    scangenerateclippreviews: true
+    scangeneratecovers: true
+    scangenerateimagepreviews: true
+    scangeneratephashes: true
+    scangeneratepreviews: true
+    scangeneratesprites: true
+    scangeneratethumbnails: true
+    stripfileextension: false
+    usefilemetadata: false
+gallery_cover_regex: (poster|cover|folder|board)\.[^\.]+$
+generated: ""
+host: 0.0.0.0
+image_lightbox:
+  scale_up: true
+  scroll_attempts_before_change: 0
+  slideshow_delay: 5000
+jwt_secret_key: 07abe6a52ad500adbee3556f638e578ce836b74d1610454c2acf9956b4cddb2f
+no_proxy: localhost,127.0.0.1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12
+nobrowser: false
+notifications_enabled: true
+parallel_tasks: 1
+plugins_path: /root/.stash/plugins
+port: 9999
+preview_audio: true
+preview_exclude_end: "0"
+preview_exclude_start: "0"
+preview_segment_duration: 0.75
+preview_segments: 12
+scrapers_path: /root/.stash/scrapers
+security_tripwire_accessed_from_public_internet: ""
+sequential_scanning: false
+session_store_key: 2b721804cacde8ff5de6bf13834adfeb4160a793a6703aec7da61aab07eca218
+show_one_time_moved_notification: false
+show_studio_as_text: true
+sound_on_preview: true
+stash:
+- excludeimage: false
+  excludevideo: false
+  path: /data/
+theme_color: '#202b33'
+ui:
+  always_start_from_beginning: true
+  front_page_content:
+  - __typename: CustomFilter
+    direction: DESC
+    message:
+      id: recently_released_objects
+      values:
+        objects: Scenes
+    mode: SCENES
+    sortBy: date
+  - __typename: CustomFilter
+    direction: DESC
+    message:
+      id: recently_added_objects
+      values:
+        objects: Studios
+    mode: STUDIOS
+    sortBy: created_at
+  - __typename: CustomFilter
+    direction: DESC
+    message:
+      id: recently_released_objects
+      values:
+        objects: Movies
+    mode: MOVIES
+    sortBy: date
+  - __typename: CustomFilter
+    direction: DESC
+    message:
+      id: recently_added_objects
+      values:
+        objects: Performers
+    mode: PERFORMERS
+    sortBy: created_at
+  - __typename: CustomFilter
+    direction: DESC
+    message:
+      id: recently_released_objects
+      values:
+        objects: Galleries
+    mode: GALLERIES
+    sortBy: date
+  last_note_seen: 20230301
+  show_child_studio_content: true
+  show_child_tag_content: true
+  track_activity: true
+video_file_naming_algorithm: OSHASH
+write_image_thumbnails: true

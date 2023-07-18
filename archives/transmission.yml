@@ -1,0 +1,10 @@
+transmission:
+  <<: *stealth
+  image: lscr.io/linuxserver/transmission:latest
+  container_name: transmission
+  environment:
+    <<: *user
+  volumes:
+    - $DOCKERDIR/appdata/transmission:/config
+    - $BLACKHOLE:/downloads
+    - $TORRENTS:/watch

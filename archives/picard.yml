@@ -1,0 +1,14 @@
+picard:
+  <<: *stealth
+  image: mikenye/picard:latest
+  container_name: picard
+  ports:
+    - 5800:5800
+  volumes:
+    - $DOCKERDIR/appdata/picard:/config
+    - $MUSIC:/storage
+  environment:
+    TZ: $TZ
+    UMASK: 002
+    DISPLAY_WIDTH: 1600
+    DISPLAY_HEIGHT: 960

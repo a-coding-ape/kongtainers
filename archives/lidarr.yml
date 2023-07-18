@@ -1,0 +1,14 @@
+lidarr:
+  <<: *stealth
+  image: lscr.io/linuxserver/lidarr:latest
+  container_name: lidarr
+  volumes:
+    - $DOCKERDIR/appdata/lidarr:/config
+    - $BLACKHOLE:/data
+    - $MUSIC:/music
+    - /etc/localtime:/etc/localtime:ro
+  environment:
+    <<: *user
+    UMASK_SET: 002
+  ports:
+    - 8686:8686

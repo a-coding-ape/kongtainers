@@ -1,0 +1,19 @@
+jellyfin:
+    <<: *media
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    user: $PUID:$PGID
+    devices:
+      - /dev/dri:/dev/dri
+    ports:
+      - 8096:8096
+      - 8920:8920
+    environment:
+      TZ: $TZ
+      UMASK_SET: 002
+    volumes:
+      - $JELLYFIN_DATA:/config
+      - $JELLYFIN_DATA/cache:/cache
+      - $BLACKHOLE:/media
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

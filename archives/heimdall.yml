@@ -1,0 +1,11 @@
+  heimdall:
+    <<: *common
+    image: lscr.io/linuxserver/heimdall
+    container_name: heimdall
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - $DOCKERDIR/appdata/heimdall:/config
+    environment:
+      TZ: $TZ
