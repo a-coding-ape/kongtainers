@@ -1,0 +1,15 @@
+airsonic-advanced:
+  <<: *media
+  image: lscr.io/linuxserver/airsonic-advanced:latest
+  container_name: airsonic-advanced
+  environment:
+    <<: *user
+    UMASK_SET: 002
+  volumes:
+    - $DOCKERDIR/appdata/airsonic-advanced:/config
+    - $MUSIC:/music
+    - $MUSIC/playlists:/playlists
+    - $MUSIC/podcasts:/podcasts
+  ports:
+    - 4040:4040
+    - 4041:4041 #UPnp

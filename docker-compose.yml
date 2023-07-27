@@ -16,50 +16,34 @@ x-core: &core
   security_opt:
     - no-new-privileges:true
   restart: unless-stopped
-x-metrics: &metrics
-  networks:
-    - loki
-  security_opt:
-    - no-new-privileges:true
-  restart: always
 x-media: &media
   network_mode: host
   security_opt:
     - no-new-privileges:true
   restart: unless-stopped
-x-stealth: &stealth
-  network_mode: service:gluetun
-  security_opt:
-    - no-new-privileges:true
-  healthcheck:
-    test: "curl -sf https://example.com  || exit 1"
-    interval: 1m
-    timeout: 10s
-    retries: 1
-  restart: unless-stopped
 services:
-  deluge:
-    <<: *stealth
-    image: lscr.io/linuxserver/deluge:latest
-    container_name: deluge
-    volumes:
-      - $DOCKERDIR/appdata/deluge:/config
-      - $BLACKHOLE:/data
+  beets:
+    image: lscr.io/linuxserver/beets:latest
+    container_name: beets
     environment:
       <<: *user
-      DELUGE_LOGLEVEL: error
-      UMASK_SET: 002
-  deunhealth:
-    image: qmcgaw/deunhealth
-    container_name: deunhealth
-    network_mode: none
+    volumes:
+      - $DOCKERDIR/appdata/beets:/config
+      - $MUSIC:/music
+      - $BLACKHOLE:/downloads
+    ports:
+      - 8337:8337
+    restart: unless-stopped
+  daapd:
+    image: lscr.io/linuxserver/daapd:latest
+    container_name: daapd
+    network_mode: host
     environment:
-      LOG_LEVEL: info
-      HEALTH_SERVER_ADDRESS: 127.0.0.1:9999
-      TZ: $TZ
-    security_opt:
-      - no-new-privileges:true
-    restart: always
+      <<: *user
+    volumes:
+      - $DOCKERDIR/appdata/daapd:/config
+      - $MUSIC:/music
+    restart: unless-stopped
   docker-gc:
     <<: *common
     image: clockworksoul/docker-gc-cron:latest
@@ -75,6 +59,20 @@ services:
       DRY_RUN: 0
       CLEAN_UP_VOLUMES: 1
       TZ: $TZ
+  dozzle:
+    <<: *common
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    ports:
+      - 8080:8080
+    environment:
+      DOZZLE_LEVEL: info
+      DOZZLE_TAILSIZE: 300
+      DOZZLE_FILTER: "status=running"
+      # DOZZLE_FILTER: "label=log_me" # limits logs displayed to containers with this label.
+      # DOCKER_HOST: tcp://socket-proxy:2375
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
   filebrowser:
     <<: *common
     image: filebrowser/filebrowser:s6
@@ -87,73 +85,18 @@ services:
       - $USERDIR:/srv
     environment:
       <<: *root
-  gluetun:
-    image: qmcgaw/gluetun
-    container_name: gluetun
-    ports:
-      - 8112:8112
-      - 6881:6881
-      - 6881:6881/udp # deluge
-      - 9696:9696 # prowlarr
-      - 8989:8989 # sonarr
-      - 7878:7878 # radarr
-    volumes:
-      - $DOCKERDIR/appdata/gluetun:/gluetun
+  mstream:
+    image: lscr.io/linuxserver/mstream:latest
+    container_name: mstream
     environment:
-      TZ: $TZ
-      VPN_SERVICE_PROVIDER: surfshark
-      VPN_TYPE: wireguard
-      WIREGUARD_PRIVATE_KEY: $SURFSHARK_PRIVATE_KEY
-      WIREGUARD_ADDRESSES: $WIREGUARD_SUBNET
-      UPDATER_PERIOD: 24h
-    cap_add:
-      - NET_ADMIN
-    devices:
-      - /dev/net/tun:/dev/net/tun
-  grafana:
-    <<: *metrics
-    image: grafana/grafana:latest
-    container_name: grafana
-    user: $PUID
-    ports:
-      - 3000:3000
-    volumes:
-      - $DOCKERDIR/appdata/grafana:/var/lib/grafana
-      - $DOCKERDIR/appdata/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
-  jellyfin:
-    <<: *media
-    image: jellyfin/jellyfin:latest
-    container_name: jellyfin
-    user: $PUID:$PGID
-    devices:
-      - /dev/dri:/dev/dri
-    ports:
-      - 8096:8096
-      - 8920:8920
-    environment:
-      TZ: $TZ
+      <<: *user
       UMASK_SET: 002
     volumes:
-      - $JELLYFIN_DATA:/config
-      - $DOCKERDIR/appdata/jellyfin/cache:/cache
-      - $BLACKHOLE:/media
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-  node-exporter:
-    <<: *metrics
-    container_name: node-exporter
-    image: prom/node-exporter:latest
+      - $DOCKERDIR/appdata/mstream:/config
+      - $MUSIC:/music
     ports:
-      - 9100:9100
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    command:
-      - '--path.procfs=/host/proc'
-      - '--path.sysfs=/host/sys'
-      - --collector.filesystem.ignored-mount-points
-      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
+      - 3000:3000
+    restart: unless-stopped
   plex:
     <<: *media
     image: lscr.io/linuxserver/plex:latest
@@ -178,58 +121,6 @@ services:
       PMM_RUN: "True"
       PMM_TEST: "False"
       PMM_NO_MISSING: "False"
-  portainer:
-    <<: *common
-    container_name: portainer
-    image: portainer/portainer-ce:latest
-    command: -H unix:///var/run/docker.sock
-    ports:
-      - 9000:9000
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - $DOCKERDIR/appdata/portainer/data:/data
-    environment:
-      TZ: $TZ
-  prometheus:
-    <<: *metrics
-    image: prom/prometheus:latest
-    container_name: prometheus
-    user: $PUID:$PGID
-    ports:
-      - 9090:9090
-    command:
-      - "--config.file=/etc/prometheus/config.yml"
-      - "--storage.tsdb.path=/prometheus"
-      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
-      - "--web.console.templates=/usr/share/prometheus/consoles"
-      - "--web.enable-lifecycle"
-      - "--web.enable-admin-api"
-    volumes:
-      - $DOCKERDIR/appdata/prometheus/config:/etc/prometheus
-      - $DOCKERDIR/appdata/prometheus/data:/prometheus
-    environment:
-      <<: *user
-  prowlarr:
-    <<: *stealth
-    image: ghcr.io/linuxserver/prowlarr:develop
-    container_name: prowlarr
-    volumes:
-      - $DOCKERDIR/appdata/prowlarr:/config
-      - /etc/localtime:/etc/localtime:ro
-    environment:
-      <<: *user
-  radarr:
-    <<: *stealth
-    image: lscr.io/linuxserver/radarr:nightly
-    container_name: radarr
-    volumes:
-      - $DOCKERDIR/appdata/radarr:/config
-      - $BLACKHOLE:/data
-      - $MOVIES:/movies
-      - /etc/localtime:/etc/localtime:ro
-    environment:
-      <<: *user
-      UMASK_SET: 002
   stash:
     <<: *media
     image: stashapp/stash:latest
@@ -242,6 +133,8 @@ services:
         max-file: "10"
         max-size: "2m"
     environment:
+      <<: *user
+      UMASK_SET: 002
       STASH_STASH: /data/
       STASH_GENERATED: /generated/
       STASH_METADATA: /metadata/
@@ -250,22 +143,10 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - $DOCKERDIR/appdata/stash:/root/.stash
       - $STASH:/data
-      - $STASH/videos/metadata:/metadata
-      - $STASH/videos/cache:/cache
-      - $STASH/videos/blobs:/blobs
-      - $STASH/videos/generated:/generated
-  sonarr:
-    <<: *stealth
-    image: lscr.io/linuxserver/sonarr
-    container_name: sonarr
-    volumes:
-      - $DOCKERDIR/appdata/sonarr:/config
-      - $BLACKHOLE:/data
-      - $TV:/tv
-      - /etc/localtime:/etc/localtime:ro
-    environment:
-      <<: *user
-      UMASK_SET: 002
+      - $STASH/metadata:/metadata
+      - $STASH/cache:/cache
+      - $STASH/blobs:/blobs
+      - $STASH/generated:/generated
   tautulli:
     <<: *core
     image: lscr.io/linuxserver/tautulli:latest
@@ -291,5 +172,3 @@ services:
       WATCHTOWER_NO_STARTUP_MESSAGE: false
       WATCHTOWER_SCHEDULE: "0 30 12 * * *" # ED @ 12:30am
       DOCKER_API_VERSION: "1.40"
-networks:
-  loki:

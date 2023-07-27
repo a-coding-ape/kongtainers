@@ -1,5 +1,5 @@
 picard:
-  <<: *stealth
+  <<: *common
   image: mikenye/picard:latest
   container_name: picard
   ports:

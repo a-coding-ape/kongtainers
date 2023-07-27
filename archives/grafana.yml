@@ -1,0 +1,10 @@
+grafana:
+  <<: *metrics
+  image: grafana/grafana:latest
+  container_name: grafana
+  user: $PUID
+  ports:
+    - 3000:3000
+  volumes:
+    - $DOCKERDIR/appdata/grafana:/var/lib/grafana
+    - $DOCKERDIR/appdata/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources

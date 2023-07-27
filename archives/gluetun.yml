@@ -1,0 +1,20 @@
+gluetun:
+  image: qmcgaw/gluetun
+  container_name: gluetun
+  ports:
+    - 8112:8112
+    - 6881:6881
+    - 6881:6881/udp # deluge
+  volumes:
+    - $DOCKERDIR/appdata/gluetun:/gluetun
+  environment:
+    TZ: $TZ
+    VPN_SERVICE_PROVIDER: surfshark
+    VPN_TYPE: wireguard
+    WIREGUARD_PRIVATE_KEY: $SURFSHARK_PRIVATE_KEY
+    WIREGUARD_ADDRESSES: $WIREGUARD_SUBNET
+    UPDATER_PERIOD: 24h
+  cap_add:
+    - NET_ADMIN
+  devices:
+    - /dev/net/tun:/dev/net/tun

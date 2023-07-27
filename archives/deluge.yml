@@ -1,0 +1,11 @@
+deluge:
+  <<: *stealth
+  image: lscr.io/linuxserver/deluge:latest
+  container_name: deluge
+  volumes:
+    - $DOCKERDIR/appdata/deluge:/config
+    - $BLACKHOLE:/data
+  environment:
+    <<: *user
+    DELUGE_LOGLEVEL: error
+    UMASK_SET: 002

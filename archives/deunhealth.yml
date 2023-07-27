@@ -1,0 +1,11 @@
+deunhealth:
+  image: qmcgaw/deunhealth
+  container_name: deunhealth
+  network_mode: none
+  environment:
+    LOG_LEVEL: info
+    HEALTH_SERVER_ADDRESS: 127.0.0.1:9999
+    TZ: $TZ
+  security_opt:
+    - no-new-privileges:true
+  restart: always

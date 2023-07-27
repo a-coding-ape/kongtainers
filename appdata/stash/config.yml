@@ -34,6 +34,13 @@ image_lightbox:
   scroll_attempts_before_change: 0
   slideshow_delay: 5000
 jwt_secret_key: 07abe6a52ad500adbee3556f638e578ce836b74d1610454c2acf9956b4cddb2f
+menu_items:
+- scenes
+- images
+- galleries
+- performers
+- studios
+- tags
 no_proxy: localhost,127.0.0.1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12
 nobrowser: false
 notifications_enabled: true
