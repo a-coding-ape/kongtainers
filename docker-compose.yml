@@ -34,16 +34,6 @@ services:
     ports:
       - 8337:8337
     restart: unless-stopped
-  daapd:
-    image: lscr.io/linuxserver/daapd:latest
-    container_name: daapd
-    network_mode: host
-    environment:
-      <<: *user
-    volumes:
-      - $DOCKERDIR/appdata/daapd:/config
-      - $MUSIC:/music
-    restart: unless-stopped
   docker-gc:
     <<: *common
     image: clockworksoul/docker-gc-cron:latest
@@ -85,18 +75,15 @@ services:
       - $USERDIR:/srv
     environment:
       <<: *root
-  mstream:
-    image: lscr.io/linuxserver/mstream:latest
-    container_name: mstream
-    environment:
-      <<: *user
-      UMASK_SET: 002
+  minidlna:
+    <<: *media
+    image: vladgh/minidlna
+    container_name: minidlna
     volumes:
-      - $DOCKERDIR/appdata/mstream:/config
-      - $MUSIC:/music
-    ports:
-      - 3000:3000
-    restart: unless-stopped
+      - $MUSIC:/media
+    environment:
+      MINIDLNA_MEDIA_DIR: /media
+      MINIDLNA_FRIENDLY_NAME: odroid
   plex:
     <<: *media
     image: lscr.io/linuxserver/plex:latest
